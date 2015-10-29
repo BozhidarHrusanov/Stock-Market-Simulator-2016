@@ -43,14 +43,16 @@ public class GameClient {
 	
 	public void getAskedAndAnswerServer() {
 		String serverMsg = networkingIN.nextLine();
-		/*if (serverMsg.equals("other_quit")){
-			connectedToServer = false;
-			System.out.println("The other player has quit the game.");
-			return;
-		}
-		//fix new line on client output console*/
+		//fix new line on client output console
 		serverMsg = serverMsg.replace("<br>", "\n");
 		System.out.println(serverMsg);
+		
+		// all special server responses should start with 'Error:...'
+		if (serverMsg.contains("Error:")){
+			connectedToServer = false;
+			return;
+		}
+		
 		String message = userInput.nextLine();
 		networkingOUT.println(message);
 		/*//if a 'quit' message was sent, stop looping

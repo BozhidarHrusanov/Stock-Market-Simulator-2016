@@ -1,0 +1,1 @@
+A simple Java multiplayer game which simulates playing on the stock market. Uses TCP and supports 2-4 players. Choose the best financial decision for each turn and make more money than the other players!
