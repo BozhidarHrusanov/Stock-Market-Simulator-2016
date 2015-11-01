@@ -35,5 +35,20 @@ public enum Stock {
 		// won't happen
 		return null;
 	}
+	
+	public static String initialsToCompanyName(char c) {
+		switch (c) {
+		case 'A':
+			return "Apple";
+		case 'C':
+			return "Cisco";
+		case 'G':
+			return "Google";
+		case 'M':
+			return "Microsoft";
+		default:
+			return "invalid company name";
+		}
+	}
 
 }

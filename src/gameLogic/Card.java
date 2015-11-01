@@ -52,6 +52,14 @@ public final class Card implements Comparable<Card> {
 		}
 	}
 
+	public static Card getCardOnTable() {
+		return DECK.get(0);
+	}
+
+	public static Card getAndRemoveCardOnTable() {
+		return DECK.remove(0);
+	}
+	
 	public String toString() {
 		return name;
 	}
@@ -135,5 +143,5 @@ public final class Card implements Comparable<Card> {
 		sb.append(")");
 		return sb.toString();
 	}
-
+	
 }
