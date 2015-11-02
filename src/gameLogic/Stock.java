@@ -22,6 +22,20 @@ public enum Stock {
 		}
 		return sb.toString();
 	}
+	
+	public static String printStockPrices() {
+		StringBuffer sb = new StringBuffer("==========<br>");
+		sb.append("Apple: ");
+		sb.append(APPLE.price);
+		sb.append("<br>Cisco: ");
+		sb.append(CISCO.price);
+		sb.append("<br>Google: ");
+		sb.append(GOOGLE.price);
+		sb.append("<br>Microsoft: ");
+		sb.append(MICROSOFT.price);
+		sb.append("<br>==========");
+		return sb.toString();
+	}
 
 	public char firstLetter() {
 		return this.toString().charAt(0);

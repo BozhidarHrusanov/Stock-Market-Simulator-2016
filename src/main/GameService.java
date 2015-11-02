@@ -40,7 +40,7 @@ public class GameService implements Runnable {
 	public void run() {
 		while (connected) {
 			if (readyForNextRound) {
-				setClientInput(""); //using the method to ensure atomicity
+				//setClientInput(""); //using the synchronized method to ensure atomicity
 				String rawInput = ""; //not yet verified to be used as clientInput
 				do {
 					// the server message is based on the game phase
@@ -244,12 +244,6 @@ public class GameService implements Runnable {
 		networkingOUT.println(msg);
 	}
 
-	/* The frontMsg is appended to the front of the next message to be sent to a
-	 * client. The buffer is emptied after the message has been sent. */
-	public void addToMessageBufferToClient(String frontMsg) {
-		buffer = frontMsg;
-	}
-
 	public String getClientInput() {
 		return clientInput;
 	}
@@ -274,14 +268,18 @@ public class GameService implements Runnable {
 		}
 	}
 	
-	public void playSelectedCard() {
+	//returns the name of the played card as a string
+	public String playSelectedCard() {
 		player.getCardByPlayerInput(Integer.parseInt(clientInput.substring(0))).execute();
+		return player.getCardByPlayerInput(Integer.parseInt(clientInput.substring(0))).name;
 	}
 
 	public String getSharesSoldReport() {
 		return sharesSoldReport;
 	}
 
+	/* The frontMsg is appended to the front of the next message to be sent to a
+	 * client. The buffer is emptied after the message has been sent. */
 	public void addToBuffer(String text) {
 		buffer += text;
 	}
