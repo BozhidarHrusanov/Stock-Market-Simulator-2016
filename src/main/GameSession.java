@@ -4,8 +4,11 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+import com.sun.xml.internal.ws.api.config.management.policy.ManagementAssertion.Setting;
+
 import gameLogic.Card;
 import gameLogic.GameStates;
+import gameLogic.Stock;
 
 public class GameSession implements Runnable {
 	
@@ -67,10 +70,28 @@ public class GameSession implements Runnable {
 	
 	@Override
 	public void run() {
+		setGameState(GameStates.TRADING_SELL);
 		while (matchOngoing) {
 			for (int i = 0; i < numberOfServices; i++) {
 				services[i].setReadyForNextRound(true);
 			}
+			
+			/* loop execution until valid input has been
+			 * received by all players. Loops logic explained:
+			 * Suppose the correct input from all players
+			 * has been received; if one or more players
+			 * are actually not yet ready then the while
+			 * condition still holds true and continues looping.*/
+			boolean allInputsReceived = false;
+			while (!allInputsReceived) {
+				allInputsReceived = true;
+				for (int i = 0; i < numberOfServices; i++) {
+					if (services[i].getClientInput().equals("")) {
+						allInputsReceived = false;
+					}
+				}
+			}
+			
 			for (int i = 0; i < numberOfServices; i++) {
 				System.out.println(services[i].getClientInput());
 			}
@@ -85,6 +106,8 @@ public class GameSession implements Runnable {
 				for (int i = 0; i < numberOfServices; i++) {
 					services[i].sellShares();
 				}
+				clearAllServicesClientInput();
+				setGameState(GameStates.TRADING_BUY);
 				break;
 			case TRADING_BUY:
 				StringBuffer sb = new StringBuffer();
@@ -95,6 +118,8 @@ public class GameSession implements Runnable {
 				for (int j = 0; j < numberOfServices; j++) {
 					services[j].addToBuffer(sb.toString());
 				}
+				clearAllServicesClientInput();
+				setGameState(GameStates.BIDDING);
 				break;
 			case BIDDING:
 				//find the services index of the bidder with the highest bid
@@ -114,19 +139,59 @@ public class GameSession implements Runnable {
 						identicalHighestBids = true;
 					}
 				}
+				
+				StringBuffer sb1 = new StringBuffer();
+				for (int i = 0; i < numberOfServices; i++) {
+					sb1.append(services[i].getPlayer().getName());
+					sb1.append(" placed a bid of ");
+					sb1.append(services[i].getPlayer().getBid());
+					sb1.append("<br>");
+				}
+				//if the highest bid is unique
 				if (!identicalHighestBids) {
 					services[highestBidderIndex].getPlayer().substractBid();
-					services[highestBidderIndex].getPlayer().addCardToHand(Card.getAndRemoveCardOnTable());
+					services[highestBidderIndex].getPlayer().addCardToHand(
+							Card.getAndRemoveCardOnTable());
+					sb1.append(services[highestBidderIndex].getPlayer().getName());
+					sb1.append(" won the bid!<br>The new card on the table is:\t");
+					sb1.append(Card.getCardOnTable());
+				} else {
+					sb1.append("There was no highest bid. Noone takes the card.");
 				}
+				for (int j = 0; j < numberOfServices; j++) {
+					services[j].addToBuffer(sb1.toString());
+				}
+				clearAllServicesClientInput();
+				setGameState(GameStates.CARD_PLAY);
 				break;
 			case CARD_PLAY:
+				StringBuffer sb2 = new StringBuffer();
 				for (int k = 0; k < numberOfServices; k++) {
-					services[k].playSelectedCard();
+					sb2.append(services[k].getPlayer().getName());
+					sb2.append(" played ");
+					sb2.append(services[k].playSelectedCard());
+					sb2.append(".<br>");
 				}
+				sb2.append(Stock.printStockPrices());
+				for (int j = 0; j < numberOfServices; j++) {
+					services[j].addToBuffer(sb2.toString());
+				}
+				clearAllServicesClientInput();
+				setGameState(GameStates.TRADING_SELL);
 				break;
 			default:
 				System.out.println("trying to force logic on an invalid state");
 				break;
+		}
+	}
+
+	/*clear the client input for all services;
+	 * If the clientInput field is empty then 
+	 * the service is not finished retrieving 
+	 * the client input. */
+	private void clearAllServicesClientInput() {
+		for (int j = 0; j < numberOfServices; j++) {
+			services[j].setClientInput("");
 		}
 	}
 
@@ -137,15 +202,11 @@ public class GameSession implements Runnable {
 		if (services[3] != null) { services[3].getPlayer().setName("East"); }
 	}
 	
-	/* The message is appended to the front of the next message to
-	 * be sent to both clients.	 
-	private void sendMessageToAll(String msg) {
-		for ( int i = 0; i < numberOfServices; i++) {
-			services[i].addToMessageBufferToClient(msg);
-		}
-	}*/
+	public synchronized void setGameState(GameStates gameState) {
+		this.gameState = gameState;
+	}
 	
-	public GameStates getGameState() {
+	public synchronized GameStates getGameState() {
 		return gameState;
 	}
 }

@@ -126,7 +126,10 @@ public class Player {
 	}
 	
 	/* TODO
-	 * read bidding and cardPlay phases
-	 * and implement their output to the clients
+	 * 
+	 * inform players of new round beginning, how many rounds are left
+	 * method which sells all player shares at the appropriate price
+	 * Game finished - player standings, total cash balance
+	 * 
 	 */
 }
