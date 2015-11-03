@@ -44,35 +44,24 @@ public class GameClient {
 		gameClient.socket.close();
 	}
 
+	/* The main tasks of the client application: get asked
+	 * by the server and then send the client's input to
+	 * the server.*/
 	public void getAskedAndAnswerServer() {
 		String serverMsg = networkingIN.nextLine();
-		//formatMessage(serverMsg);
-		// fix new line on client output console
+		// fixes new line on client output console
 		serverMsg = serverMsg.replace("<br>", "\n");
 		System.out.println(serverMsg);
 
-		// all special server responses should start with 'Error:...'
-		if (serverMsg.contains("Error:")) {
+		/* All special server responses start with 'Error:...'.
+		 * A "game is over" message signals that the server
+		 * doesn't expect a response from the client. */
+		if (serverMsg.contains("Error:") || serverMsg.contains("game is over")) {
 			connectedToServer = false;
 			return;
 		}
-
 		String message = userInput.nextLine();
 		networkingOUT.println(message);
-		/*
-		 * //if a 'quit' message was sent, stop looping if
-		 * (message.equals("quit")){ connectedToServer = false; }
-		 */
-	}
-	
-	/* if the message informs the player of a new phase then beautify it*/
-	private void formatMessage(String msg) {
-		if (msg.startsWith("PHASE:")) {
-			String result = "*********************************************"
-					+ "\t\t" + msg.substring(7) + "\t\t"
-					+ "*********************************************";
-			msg = result;
-		}
 	}
 
 	public boolean isConnectedToServer() {
