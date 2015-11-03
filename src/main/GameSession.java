@@ -1,8 +1,5 @@
 package main;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
 import gameLogic.Card;
 import gameLogic.GameStates;
 import gameLogic.Stock;
@@ -10,22 +7,14 @@ import gameLogic.Stock;
 public class GameSession implements Runnable {
 	
 	private GameService[] services = new GameService[4];
-	private int numberOfServices;
+	// initially for 1 player; changed later by the 1st player
+	private int numberOfServices = 1;
+	@SuppressWarnings("unused")
 	private boolean botsON;
 	//if a player disconnects the match thread ends execution
-	private boolean matchOngoing = true;
+	private int currentRound = 4;
 	private GameStates gameState = GameStates.SETUP;
 
-	public GameSession(/*GameService gameServicePlayer1*/) {
-		/*this.services[0] = gameServicePlayer1;
-		this.services[0].setSession(this);
-		new Thread(services[0]).start();
-		System.out.println("Waiting for other players to connect...");
-		services[0].sendMessageToClient("Waiting for other players to connect...");
-		numberOfServices = services[0].askGameMode();
-		botsON = services[0].askBots();*/
-	}
-	
 	public void addPlayer(GameService otherPlayerSevice) {
 		int freeSlotIndex = -1;
 		//find a free slot for the new player
@@ -48,9 +37,6 @@ public class GameSession implements Runnable {
 		new Thread(this.services[freeSlotIndex]).start();
 		System.out.println("playerService" + freeSlotIndex +" thread started!");
 		services[freeSlotIndex].sendMessageToClient("You joined a session!");
-		System.out.println("Game session has "
-					+ (freeSlotIndex+1) + "/" + numberOfServices
-					+ " players in.");
 		
 		/* if this is the first player: ask for game mode*/
 		if (freeSlotIndex == 0) {
@@ -58,13 +44,13 @@ public class GameSession implements Runnable {
 			botsON = services[0].askBots();
 		}
 		
+		System.out.println("Game session has "
+					+ (freeSlotIndex+1) + "/" + numberOfServices
+					+ " players in.");
+		
+		
 		//if this is the last player - start game session thread
 		if (freeSlotIndex == (numberOfServices - 1)) { 
-			/*try {
-				Thread.sleep(1000);
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			}*/
 			assignPlayerNames();
 			new Thread(this).start();
 			System.out.println("Match thread started!");
@@ -73,30 +59,18 @@ public class GameSession implements Runnable {
 	
 	@Override
 	public void run() {
-		System.out.println("Game session run started.");
-		/* loop until all service threads are already in their run() */
-		boolean allServicesReady = false;
-		while (!allServicesReady) {
-			allServicesReady = true;
-			for (int j = 0; j < numberOfServices; j++) {
-				if (!services[j].isStarted()) {
-					System.out.println(services[j] + " is not rdy. ");
-					allServicesReady = false;
-				}
-			}
-		}
 		sendPlayerNameToClient();
-		System.out.println("After sendPlayerNameToClient");
 		setGameState(GameStates.TRADING_SELL);
-		while (matchOngoing) {
+		while (currentRound <= 5) {
 			for (int i = 0; i < numberOfServices; i++) {
 				services[i].setReadyForNextRound(true);
 			}
+			
 			/* loop execution until valid input has been
-			 * received by all players. Loops logic explained:
+			 * received by all players. Loop's logic explained:
 			 * Suppose the correct input from all players
 			 * has been received; if one or more players
-			 * are actually not yet ready then the while
+			 * are actually not yet ready then the 'while'
 			 * condition still holds true and continues looping.*/
 			boolean allInputsReceived = false;
 			while (!allInputsReceived) {
@@ -111,7 +85,24 @@ public class GameSession implements Runnable {
 				System.out.println(services[i].getClientInput());
 			}
 			forceGameLogic();
+		} // the 5th round has ended: game is over.
+		setGameState(GameStates.GAME_OVER);
+		
+		// do not edit this string message
+		addToAllClientsBuffer("<br>The game is over now.<br>");
+		
+		for (int j = 0; j < numberOfServices; j++) {
+			services[j].getPlayer().sellAllShares();
+			addToAllClientsBuffer(services[j].printPlayerMoneyReport() + "<br>");
 		}
+		// after the all client buffers are filled: send message
+		for (int i = 0; i < numberOfServices; i++) {
+			services[i].sendBufferToClient();
+		}
+		for (int i = 0; i < numberOfServices; i++) {
+			services[i].setConnected(false);
+		}
+		
 	}
 
 	/* force the game logic depending on the current game state */
@@ -122,6 +113,7 @@ public class GameSession implements Runnable {
 					services[i].sellShares();
 					services[i].addToBuffer("Success!");
 				}
+				
 				clearAllServicesClientInput();
 				setGameState(GameStates.TRADING_BUY);
 				break;
@@ -134,6 +126,7 @@ public class GameSession implements Runnable {
 				for (int j = 0; j < numberOfServices; j++) {
 					services[j].addToBuffer(sb.toString());
 				}
+				
 				clearAllServicesClientInput();
 				setGameState(GameStates.BIDDING);
 				break;
@@ -177,6 +170,7 @@ public class GameSession implements Runnable {
 				for (int j = 0; j < numberOfServices; j++) {
 					services[j].addToBuffer(sb1.toString());
 				}
+				
 				clearAllServicesClientInput();
 				setGameState(GameStates.CARD_PLAY);
 				break;
@@ -192,8 +186,11 @@ public class GameSession implements Runnable {
 				for (int j = 0; j < numberOfServices; j++) {
 					services[j].addToBuffer(sb2.toString());
 				}
+				
 				clearAllServicesClientInput();
 				setGameState(GameStates.TRADING_SELL);
+				// advance the round counter
+				currentRound++;
 				break;
 			default:
 				System.out.println("trying to force logic on an invalid state");
@@ -208,6 +205,12 @@ public class GameSession implements Runnable {
 	private void clearAllServicesClientInput() {
 		for (int j = 0; j < numberOfServices; j++) {
 			services[j].setClientInput("");
+		}
+	}
+	
+	private void addToAllClientsBuffer(String msg) {
+		for (int j = 0; j < numberOfServices; j++) {
+			services[j].addToBuffer(msg);
 		}
 	}
 	
@@ -231,5 +234,9 @@ public class GameSession implements Runnable {
 	
 	public synchronized GameStates getGameState() {
 		return gameState;
+	}
+
+	public int getCurrentRound() {
+		return currentRound;
 	}
 }

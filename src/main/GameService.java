@@ -14,9 +14,10 @@ public class GameService implements Runnable {
 	private Socket socket;
 	private Scanner networkingIN;
 	private PrintWriter networkingOUT;
-	private boolean readyForNextRound = false;
+	/* if readyForNextRound is not volatile its value
+	 * is not correctly read by other threads */
+	private volatile boolean readyForNextRound = false;
 	private boolean connected = true;
-	private boolean started = false;
 	private String clientInput = "";
 	private String buffer = "";
 	/*contains the initials of the company whose shares were sold */
@@ -39,11 +40,8 @@ public class GameService implements Runnable {
 
 	@Override
 	public void run() {
-		setStarted(true);
-		System.out.println("setStarted - true");
 		while (connected) {
 			if (readyForNextRound) {
-				System.out.println("rdyForNextRound !!!! ");
 				String rawInput = ""; // not yet verified to be used as clientInput
 				do {
 					// the server message is based on the game phase
@@ -67,36 +65,41 @@ public class GameService implements Runnable {
 		StringBuffer sb = new StringBuffer();
 		switch (session.getGameState()) {
 		case TRADING_SELL:
-			sb.append("PHASE:TRADING PHASE HAS BEGUN");
+			sb.append(printPhaseBanner());
+			sb.append("The shares you own are:<br>");
 			sb.append(player.displayPlayerShares());
 			sb.append("<br>" + "Your money balance is: " + player.getMoney());
-			sb.append(player.printCardsInHand());
+			sb.append("<br>The cards in your hand are:<br>" + player.printCardsInHand());
 			sb.append("Enter the company's first letter followed by the amount of stocks<br>");
-			sb.append("you wish to sell (ex. 'G3' - this sells 3 Google stocks; 'A0' - this sells nothing)");
+			sb.append("you wish to sell (ex. 'G3' - sells 3 Google stocks; 'A0' - sells nothing)");
 			return sb.toString();
 		case TRADING_BUY:
 			sb.append("Enter the company's first letter followed by the amount of stocks<br>");
-			sb.append("you wish to buy (ex. 'G3' - this buys 3 Google stocks; 'A0' - this buys nothing)");
+			sb.append("you wish to buy (ex. 'G3' - buys 3 Google stocks; 'A0' - buys nothing)");
 			return sb.toString();
 		case BIDDING:
-			sb.append("PHASE:CARD BIDDING PHASE HAS BEGUN");
+			sb.append(printPhaseBanner());
 			sb.append(player.displayPlayerShares());
 			sb.append("<br>" + "Your money balance is: " + player.getMoney());
-			sb.append(player.printCardsInHand());
-			sb.append( "Place your bid for the card<br>" + Card.getCardOnTable());
-			sb.append("<br>(ex. '15' or '0' to skip bidding): ");
+			sb.append("<br>The cards in your hand are:<br>" + player.printCardsInHand());
+			sb.append("Place your bid for the card (ex. '15' or '0' to skip bidding):<br>");
+			sb.append("Bid for: " + Card.getCardOnTable());
 			 return sb.toString();
 		case CARD_PLAY:
-			sb.append("PHASE:CARD PLAYING PHASE HAS BEGUN");
+			sb.append(printPhaseBanner());
 			sb.append("Enter the number of the card you wish to play:<br>");
 			sb.append(player.printCardsInHand());
+			return sb.toString();
+		case GAME_OVER:
+			sb.append(printPhaseBanner());
 			return sb.toString();
 		default:
 			return "invalid phase";
 		}
 	}
-
-	/* returns whether the input is valid, and if it is executes the corresponding method */
+	
+	/* returns whether the input is valid,
+	 * and if it is executes the corresponding method */
 	private boolean isInputValid(String message) {
 		if (message.isEmpty()) {
 			return false;
@@ -126,7 +129,7 @@ public class GameService implements Runnable {
 			if (amountOfShares > player.getSharesAmount(message.charAt(0))) {
 				buffer = "You tried to sell " + amountOfShares + " shares, but"
 						+ " you only have " + player.getSharesAmount(message.charAt(0))
-								+ " for that company!";
+						+ " for that company!";
 				return false;
 			}
 			
@@ -139,7 +142,8 @@ public class GameService implements Runnable {
 				return false;
 			}
 			if (companySharesSold == message.charAt(0)){
-				buffer = "You are not allowed to buy and sell shares from the same company in the same turn!";
+				buffer = "You are not allowed to buy and sell shares from the"
+						+ " same company in the same turn!";
 				return false;
 			}
 			int singleSharePrice = Stock.parseStock(message.charAt(0)).price;
@@ -237,9 +241,9 @@ public class GameService implements Runnable {
 		
 		return player.getName() + " bought " + sharesAmount + " "
 				+ Stock.initialsToCompanyName(clientInput.charAt(0))
-				+ " shares.<br>" + player.getName() + "'s current money balance is "
-				+ player.getMoney() + " pounds.";
+				+ " shares.<br>" + printPlayerMoneyReport();
 	}
+	
 
 	public int askGameMode() {
 		networkingOUT.println("Select the number of total players to play"
@@ -262,6 +266,15 @@ public class GameService implements Runnable {
 
 	public void sendMessageToClient(String msg) {
 		networkingOUT.println(msg);
+	}
+	
+	public void sendBufferToClient() {
+		networkingOUT.println(buffer);
+	}
+	
+	public String printPlayerMoneyReport() {
+		return player.getName() + "'s current money balance is "
+				+ player.getMoney() + " pounds.";
 	}
 
 	public String getClientInput() {
@@ -290,7 +303,8 @@ public class GameService implements Runnable {
 	
 	//returns the name of the played card as a string
 	public String playSelectedCard() {
-		Card card = player.getCardByPlayerInput(Integer.parseInt(clientInput.substring(0)));
+		Card card = player.getCardByPlayerInput(
+				Integer.parseInt(clientInput.substring(0)));
 		card.execute();
 		player.removeCardFromHand(card);
 		return card.name;
@@ -300,9 +314,9 @@ public class GameService implements Runnable {
 		return sharesSoldReport;
 	}
 
-	/* The frontMsg is appended to the front of the next message to be sent to a
+	/* The buffer is appended to the front of the next message to be sent to a
 	 * client. The buffer is emptied after the message has been sent. */
-	public void addToBuffer(String text) {
+	public synchronized void addToBuffer(String text) {
 		buffer += text;
 	}
 
@@ -310,17 +324,34 @@ public class GameService implements Runnable {
 		return player;
 	}
 
-	public boolean isStarted() {
-		return started;
-	}
-	
-	public synchronized void setStarted(boolean started) {
-		this.started = started;
-	}
-
 	public synchronized boolean isReadyForNextRound() {
 		return readyForNextRound;
 	}
 	
+	private String printPhaseBanner(){
+		switch (session.getGameState()) {
+		case TRADING_SELL:
+			return "===============================================<br>"
+				+ "\tRound " + session.getCurrentRound()
+				+ " TRADING PHASE HAS BEGUN<br>"
+				+ "===============================================<br>";
+		case BIDDING:
+			return "===============================================<br>"
+				+ "\tRound " + session.getCurrentRound()
+				+ " CARD BIDDING PHASE HAS BEGUN<br>"
+				+ "===============================================<br>";
+		case CARD_PLAY:
+			return "===============================================<br>"
+				+ "\tRound " + session.getCurrentRound()
+				+ " CARD PLAYING PHASE HAS BEGUN<br>"
+				+ "===============================================<br>";
+		case GAME_OVER:
+			return "===============================================<br>"
+				+ "\t\tTHE GAME IS OVER<br>"
+				+ "===============================================<br>";
+		default:
+			return "invalid phase banner";
+		}
+	}
 	
 }

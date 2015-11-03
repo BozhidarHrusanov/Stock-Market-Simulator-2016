@@ -52,16 +52,9 @@ public class Player {
 			System.out.println("invalid company initials");
 		}
 	}
-	
-	public String displayPlayerShares(){
-		StringBuffer sb = new StringBuffer();
-			sb.append("Apple: " + shares[0]+"<br>");
-			sb.append("Cisco: " + shares[1] + "<br>");
-			sb.append("Google: " + shares[2] +"<br>");
-			sb.append("Microsoft: " + shares[3] +"<br>");
-			return sb.toString();
-	}
 
+	/* Returns the amount of shares owned for a specific company;
+	 * Parameter: the first char of the company name. */
 	public int getSharesAmount(char companyInitials) {
 		switch (companyInitials) {
 		case 'A':
@@ -79,6 +72,15 @@ public class Player {
 		return 0;
 	}
 	
+	public String displayPlayerShares() {
+		StringBuffer sb = new StringBuffer();
+		sb.append("Apple: " + shares[0] + "<br>");
+		sb.append("Cisco: " + shares[1] + "<br>");
+		sb.append("Google: " + shares[2] + "<br>");
+		sb.append("Microsoft: " + shares[3] + "<br>");
+		return sb.toString();
+	}
+	
 	public void substractBid() {
 		money -= bid;
 		bid = 0;
@@ -94,11 +96,21 @@ public class Player {
 		return sb.toString();
 	}
 	
+	/* should be called only when the game is over. */
+	public void sellAllShares() {
+		modifyMoney(Stock.APPLE.price * shares[0]);
+		modifyMoney(Stock.CISCO.price * shares[1]);
+		modifyMoney(Stock.GOOGLE.price * shares[2]);
+		modifyMoney(Stock.MICROSOFT.price * shares[3]);
+	}
+	
 	public Card getCardByPlayerInput(int playerInput) {
 		return cardsArray.get(playerInput - 1);
 	}
 	
-	public void modifyMoney(int additionalMoney) {
+	/* method to manipulate the value of money;
+	 * Use a negative value to subtract. */
+	public synchronized void modifyMoney(int additionalMoney) {
 		money += additionalMoney;
 	}
 	

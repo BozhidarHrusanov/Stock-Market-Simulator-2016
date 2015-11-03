@@ -14,7 +14,7 @@ public class GameServer {
 	public void play() throws IOException {
 		@SuppressWarnings("resource")
 		ServerSocket serverSocket = new ServerSocket(PORT);
-		System.out.println("Started GamingServer0.5 at port " + PORT);
+		System.out.println("Started GamingServer v0.5 at port " + PORT);
 		System.out.println("Waiting for clients to connect...");
 
 		while (true) {
