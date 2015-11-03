@@ -3,9 +3,6 @@ package main;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-
-import com.sun.xml.internal.ws.api.config.management.policy.ManagementAssertion.Setting;
-
 import gameLogic.Card;
 import gameLogic.GameStates;
 import gameLogic.Stock;
@@ -19,27 +16,27 @@ public class GameSession implements Runnable {
 	private boolean matchOngoing = true;
 	private GameStates gameState = GameStates.SETUP;
 
-	public GameSession(GameService gameServicePlayer1) {
-		this.services[0] = gameServicePlayer1;
+	public GameSession(/*GameService gameServicePlayer1*/) {
+		/*this.services[0] = gameServicePlayer1;
+		this.services[0].setSession(this);
 		new Thread(services[0]).start();
 		System.out.println("Waiting for other players to connect...");
 		services[0].sendMessageToClient("Waiting for other players to connect...");
 		numberOfServices = services[0].askGameMode();
-		botsON = services[0].askBots();
-		this.services[0].setSession(this);
+		botsON = services[0].askBots();*/
 	}
 	
 	public void addPlayer(GameService otherPlayerSevice) {
-		int freeSlotIndex = 0;
+		int freeSlotIndex = -1;
 		//find a free slot for the new player
-		for (int i = 1; i < numberOfServices; i++) {
+		for (int i = 0; i < numberOfServices; i++) {
 			if (services[i] == null) {
 				freeSlotIndex = i;
 				break;
 			}
 		}
 		//if no free slot is found
-		if (freeSlotIndex == 0) {
+		if (freeSlotIndex == -1) {
 			otherPlayerSevice.sendMessageToClient("Error: no free slot for you, sorry.");
 			System.out.println("Player tried to join, but there is no free slot.");
 			return;
@@ -55,13 +52,19 @@ public class GameSession implements Runnable {
 					+ (freeSlotIndex+1) + "/" + numberOfServices
 					+ " players in.");
 		
+		/* if this is the first player: ask for game mode*/
+		if (freeSlotIndex == 0) {
+			numberOfServices = services[0].askGameMode();
+			botsON = services[0].askBots();
+		}
+		
 		//if this is the last player - start game session thread
 		if (freeSlotIndex == (numberOfServices - 1)) { 
-			try {
+			/*try {
 				Thread.sleep(1000);
 			} catch (InterruptedException e) {
 				e.printStackTrace();
-			}
+			}*/
 			assignPlayerNames();
 			new Thread(this).start();
 			System.out.println("Match thread started!");
@@ -70,12 +73,25 @@ public class GameSession implements Runnable {
 	
 	@Override
 	public void run() {
+		System.out.println("Game session run started.");
+		/* loop until all service threads are already in their run() */
+		boolean allServicesReady = false;
+		while (!allServicesReady) {
+			allServicesReady = true;
+			for (int j = 0; j < numberOfServices; j++) {
+				if (!services[j].isStarted()) {
+					System.out.println(services[j] + " is not rdy. ");
+					allServicesReady = false;
+				}
+			}
+		}
+		sendPlayerNameToClient();
+		System.out.println("After sendPlayerNameToClient");
 		setGameState(GameStates.TRADING_SELL);
 		while (matchOngoing) {
 			for (int i = 0; i < numberOfServices; i++) {
 				services[i].setReadyForNextRound(true);
 			}
-			
 			/* loop execution until valid input has been
 			 * received by all players. Loops logic explained:
 			 * Suppose the correct input from all players
@@ -89,9 +105,8 @@ public class GameSession implements Runnable {
 					if (services[i].getClientInput().equals("")) {
 						allInputsReceived = false;
 					}
-				}
+				}	
 			}
-			
 			for (int i = 0; i < numberOfServices; i++) {
 				System.out.println(services[i].getClientInput());
 			}
@@ -105,6 +120,7 @@ public class GameSession implements Runnable {
 			case TRADING_SELL:
 				for (int i = 0; i < numberOfServices; i++) {
 					services[i].sellShares();
+					services[i].addToBuffer("Success!");
 				}
 				clearAllServicesClientInput();
 				setGameState(GameStates.TRADING_BUY);
@@ -192,6 +208,13 @@ public class GameSession implements Runnable {
 	private void clearAllServicesClientInput() {
 		for (int j = 0; j < numberOfServices; j++) {
 			services[j].setClientInput("");
+		}
+	}
+	
+	private void sendPlayerNameToClient() {
+		for (int j = 0; j < numberOfServices; j++) {
+			services[j].addToBuffer("You are assigned the name: "
+					+ services[j].getPlayer().getName());
 		}
 	}
 

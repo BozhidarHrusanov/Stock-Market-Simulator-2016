@@ -52,6 +52,15 @@ public class Player {
 			System.out.println("invalid company initials");
 		}
 	}
+	
+	public String displayPlayerShares(){
+		StringBuffer sb = new StringBuffer();
+			sb.append("Apple: " + shares[0]+"<br>");
+			sb.append("Cisco: " + shares[1] + "<br>");
+			sb.append("Google: " + shares[2] +"<br>");
+			sb.append("Microsoft: " + shares[3] +"<br>");
+			return sb.toString();
+	}
 
 	public int getSharesAmount(char companyInitials) {
 		switch (companyInitials) {
@@ -113,6 +122,10 @@ public class Player {
 		cardsArray.add(card);
 	}
 	
+	public void removeCardFromHand(Card card) {
+		cardsArray.remove(card);
+	}
+	
 	public int getNumberOfCardsInHand() {
 		return cardsArray.size();
 	}
@@ -127,9 +140,18 @@ public class Player {
 	
 	/* TODO
 	 * 
-	 * inform players of new round beginning, how many rounds are left
+	 * display to the player before 1st sell phase: DONE
+	 * -what shares he has; how much money he has; what cards he has DONE 
+	 * inform players of new round beginning, how many rounds are left ********DERP HAS BEGUN*******
 	 * method which sells all player shares at the appropriate price
 	 * Game finished - player standings, total cash balance
+	 * 					*********************************************
+	 * 					* 		SHARES SELLING PHASE HAS BEGUN		*
+	 * 					*********************************************
+	 * 					=============================================
+	 * 					=		SHARES SELLING PHASE HAS BEGUN		=
+	 * 					=============================================
+	 * PHASE:SHARES SELLING PHASE HAS BEGUN
 	 * 
 	 */
 }

@@ -35,6 +35,7 @@ public class GameClient {
 	}
 
 	public static void main(String[] args) throws IOException {
+		System.out.println("client version 0.5");
 		GameClient gameClient = new GameClient();
 		gameClient.init();
 		while (gameClient.isConnectedToServer()) {
@@ -45,6 +46,7 @@ public class GameClient {
 
 	public void getAskedAndAnswerServer() {
 		String serverMsg = networkingIN.nextLine();
+		//formatMessage(serverMsg);
 		// fix new line on client output console
 		serverMsg = serverMsg.replace("<br>", "\n");
 		System.out.println(serverMsg);
@@ -61,6 +63,16 @@ public class GameClient {
 		 * //if a 'quit' message was sent, stop looping if
 		 * (message.equals("quit")){ connectedToServer = false; }
 		 */
+	}
+	
+	/* if the message informs the player of a new phase then beautify it*/
+	private void formatMessage(String msg) {
+		if (msg.startsWith("PHASE:")) {
+			String result = "*********************************************"
+					+ "\t\t" + msg.substring(7) + "\t\t"
+					+ "*********************************************";
+			msg = result;
+		}
 	}
 
 	public boolean isConnectedToServer() {
