@@ -14,7 +14,7 @@ public final class Card implements Comparable<Card> {
 
 	public static enum Type {
 		PLUS5, PLUS10, MINUS10
-	};
+	}
 
 	public static final Map<String, Card> MAP = new TreeMap<>();
 	public static final List<Card> DECK = new ArrayList<>();
@@ -32,23 +32,23 @@ public final class Card implements Comparable<Card> {
 
 	public void execute() {
 		switch (type) {
-		case PLUS5: {
+		case PLUS5:
 			stocks[0].price += 5;
 			stocks[1].price -= 5;
 			break;
-		}
-		case PLUS10: {
+		case PLUS10:
 			stocks[0].price += 10;
 			stocks[1].price -= 5;
 			stocks[2].price -= 5;
 			break;
-		}
-		case MINUS10: {
+		case MINUS10:
 			stocks[0].price -= 10;
 			stocks[1].price += 5;
 			stocks[2].price += 5;
 			break;
-		}
+		default:
+			System.out.println("invalid card type");
+			break;
 		}
 	}
 
@@ -121,6 +121,7 @@ public final class Card implements Comparable<Card> {
 		}
 	}
 
+	@SuppressWarnings("null")
 	public static String cardName(Stock[] stocks, Type type) {
 		String[] effects = null;
 		switch (type) {
@@ -132,6 +133,10 @@ public final class Card implements Comparable<Card> {
 			break;
 		case MINUS10:
 			effects = new String[] { "-10", "+5" };
+			break;
+		default:
+			System.out.println("invalid card effects");
+			break;
 		}
 		StringBuffer sb = new StringBuffer("(");
 		sb.append(stocks[0].firstLetter());
